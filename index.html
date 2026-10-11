@@ -1,0 +1,485 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Spell Streak</title>
+<style>
+:root{--bg:#0a1020;--panel:#121b30;--panel2:#18233d;--line:#25335a;--text:#e8eefc;--muted:#8fa0c4;--green:#18d26e;--red:#ff4d5e;--gold:#ffc83d;--blue:#3d8bff}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;min-height:100vh}
+.ticker{background:#000;border-bottom:2px solid var(--green);overflow:hidden;white-space:nowrap;height:32px;line-height:32px;font-size:13px;font-weight:700;letter-spacing:.5px}
+.ticker .track{display:inline-block;padding-left:100%;animation:scroll 40s linear infinite}
+.ticker span{margin-right:36px}.up{color:var(--green)}.down{color:var(--red)}
+@keyframes scroll{to{transform:translateX(-100%)}}
+.wrap{max-width:640px;margin:0 auto;padding:20px 16px 60px}
+h1{font-size:34px;margin:18px 0 4px;letter-spacing:-.5px}
+h1 em{color:var(--green);font-style:normal}
+.sub{color:var(--muted);margin:0 0 22px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px}
+.levels{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:16px 0}
+.lvl{background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:16px;text-align:left;color:var(--text);cursor:pointer;font:inherit;transition:.15s}
+.lvl:hover{border-color:var(--green);transform:translateY(-2px)}
+.lvl b{display:block;font-size:20px}.lvl small{color:var(--muted)}.lvl .best{display:block;margin-top:8px;color:var(--gold);font-size:12px}
+.note{color:var(--muted);font-size:13px;margin-top:10px}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+select{background:var(--panel2);color:var(--text);border:1px solid var(--line);border-radius:8px;padding:8px;max-width:100%}
+.stats{display:flex;justify-content:space-between;gap:8px;margin-bottom:12px}
+.stat{flex:1;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:8px 10px;text-align:center}
+.stat small{display:block;color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.6px}
+.stat b{font-size:20px}
+.bar{height:12px;background:var(--panel2);border-radius:8px;overflow:hidden;border:1px solid var(--line)}
+.bar i{display:block;height:100%;width:100%;background:var(--green);transition:width .1s linear,background .3s}
+.worth{display:flex;justify-content:space-between;margin:8px 2px 14px;color:var(--muted);font-size:14px}
+.worth b{color:var(--text)}
+.actions{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:14px}
+button{font:inherit;cursor:pointer}
+.btn{background:var(--panel2);color:var(--text);border:1px solid var(--line);border-radius:10px;padding:12px 8px;font-weight:600;font-size:14px;line-height:1.25}
+.btn:hover:not(:disabled){border-color:var(--blue)}
+.btn small{display:block;color:var(--muted);font-weight:400;font-size:11px}
+.btn:disabled{opacity:.5;cursor:default}
+.btn.primary{background:var(--green);color:#03150b;border-color:var(--green);font-size:16px}
+.btn.primary:hover:not(:disabled){filter:brightness(1.1);border-color:var(--green)}
+.speaking{animation:pulse 1s infinite}
+@keyframes pulse{50%{box-shadow:0 0 0 4px rgba(61,139,255,.35)}}
+input[type=text]{width:100%;background:#0c1427;color:var(--text);border:2px solid var(--line);border-radius:12px;padding:16px;font-size:28px;text-align:center;letter-spacing:2px;outline:none}
+input[type=text]:focus{border-color:var(--green)}
+.hint{background:#0c1427;border:1px dashed var(--line);border-radius:10px;padding:10px 12px;margin-top:12px;font-size:15px;color:var(--gold)}
+.hint.hidden{display:none}
+.fb{margin-top:14px;border-radius:12px;padding:16px;border:1px solid var(--line);background:var(--panel2)}
+.fb.good{border-color:var(--green)}.fb.bad{border-color:var(--red)}
+.fb h2{margin:0 0 6px;font-size:22px}
+.fb .word{font-size:30px;font-weight:800;letter-spacing:1px;margin:6px 0}
+.fb p{margin:6px 0;color:var(--muted);font-size:14px}.fb p b{color:var(--text)}
+.hide{display:none!important}
+.big{font-size:56px;font-weight:800;color:var(--green);margin:6px 0}
+.miss{list-style:none;padding:0;margin:8px 0}
+.miss li{padding:6px 0;border-bottom:1px solid var(--line)}
+.warn{background:#3a2a00;border:1px solid var(--gold);color:var(--gold);padding:10px;border-radius:10px;margin-bottom:12px;font-size:14px}
+</style>
+</head>
+<body>
+<div class="ticker"><div class="track">
+<span>SPELL STREAK</span><span class="up">EASY ▲ +1000</span><span class="up">MEDIUM ▲ +1000</span><span class="up">HARD ▲ +1000</span><span class="up">EXPERT ▲ +1000</span><span class="down">TYPOS ▼ 0</span><span>FASTER SPELLING = MORE POINTS</span><span class="up">STREAK BONUS ▲ +50%</span>
+<span>SPELL STREAK</span><span class="up">EASY ▲ +1000</span><span class="up">MEDIUM ▲ +1000</span><span class="up">HARD ▲ +1000</span><span class="up">EXPERT ▲ +1000</span><span class="down">TYPOS ▼ 0</span><span>FASTER SPELLING = MORE POINTS</span><span class="up">STREAK BONUS ▲ +50%</span>
+</div></div>
+
+<div class="wrap">
+
+<!-- START -->
+<section id="start">
+  <h1>Spell <em>Streak</em></h1>
+  <p class="sub">Hear the word. Type it fast. Faster correct spelling = more points.</p>
+  <div id="nospeech" class="warn hide">Your browser doesn't support speech synthesis, so words can't be read aloud. Try Chrome, Edge, or Safari.</div>
+  <div class="card">
+    <b>Choose a level</b>
+    <div class="levels" id="levels"></div>
+    <p class="note">10 words per round. Replay is free. “Use in a sentence” and “Show root” each cost 100 points.</p>
+    <div class="row" style="margin-top:12px">
+      <label for="voice" class="note">Voice:</label>
+      <select id="voice"></select>
+      <button class="btn" id="testVoice" style="padding:8px 12px">Test</button>
+    </div>
+  </div>
+  <p class="note">Grade-level modes (2nd–12th) coming soon.</p>
+</section>
+
+<!-- GAME -->
+<section id="game" class="hide">
+  <div class="stats">
+    <div class="stat"><small>Word</small><b id="sWord">1/10</b></div>
+    <div class="stat"><small>Score</small><b id="sScore">0</b></div>
+    <div class="stat"><small>Streak</small><b id="sStreak">0</b></div>
+  </div>
+  <div class="bar"><i id="barFill"></i></div>
+  <div class="worth"><span>Worth: <b id="worth">1000</b> pts <span id="mult"></span></span><span>Time: <b id="clock">0.0</b>s</span></div>
+
+  <div class="actions">
+    <button class="btn" id="bReplay">🔊 Replay word<small>free</small></button>
+    <button class="btn" id="bSentence">💬 Use in a sentence<small>−100 pts</small></button>
+    <button class="btn" id="bRoot">🌿 Show root<small>−100 pts</small></button>
+  </div>
+
+  <form id="form" autocomplete="off">
+    <input type="text" id="answer" placeholder="Type the word…" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" aria-label="Your spelling">
+    <button class="btn primary" id="bSubmit" type="submit" style="width:100%;margin-top:12px;padding:14px">Submit</button>
+  </form>
+
+  <div class="hint hidden" id="rootBox"></div>
+
+  <div class="fb hide" id="fb"></div>
+</section>
+
+<!-- RESULT -->
+<section id="result" class="hide">
+  <h1>Round <em>complete</em></h1>
+  <div class="card" style="text-align:center">
+    <div class="note" id="rLevel"></div>
+    <div class="big" id="rScore">0</div>
+    <div id="rBest" class="note"></div>
+    <p id="rDetail"></p>
+  </div>
+  <div class="card" style="margin-top:14px" id="missBox">
+    <b>Words to practice</b>
+    <ul class="miss" id="missList"></ul>
+  </div>
+  <div class="row" style="margin-top:16px">
+    <button class="btn primary" id="again" style="flex:1;padding:14px">Play again</button>
+    <button class="btn" id="menu" style="flex:1;padding:14px">Change level</button>
+  </div>
+</section>
+
+</div>
+
+<script>
+/* ------------------------------------------------------------------
+   WORD DATA
+   Each entry: [word, sentence, root hint]
+   Root hints give the language of origin and original meaning WITHOUT
+   writing the word or its root. Add new levels (e.g. grade2 … grade12)
+   by adding another key to LEVELS — the UI builds itself from this.
+------------------------------------------------------------------- */
+const LEVELS = {
+  easy: { label: "Easy", blurb: "Everyday words", words: [
+    ["friend","My best friend lives next door.","Old English origin. Originally meant “one who loves.”"],
+    ["people","Many people came to the parade.","Latin origin, through French. Originally meant “a nation” or “a community.”"],
+    ["beautiful","The sunset over the lake was beautiful.","Latin origin, through French. Originally meant “pretty” or “handsome.”"],
+    ["special","Today is a very special day.","Latin origin. Originally meant “of a particular kind.”"],
+    ["brother","My brother plays on the soccer team.","Ancient Germanic origin. Originally meant a male born to the same parents."],
+    ["house","We painted the house blue.","Old English origin. Originally meant a shelter or dwelling."],
+    ["river","The river flows all the way to the sea.","Latin origin, through French. Originally meant “the land beside the water.”"],
+    ["window","Please open the window; it's warm in here.","Old Norse origin. Originally meant “an eye for the air.”"],
+    ["garden","She planted tomatoes in the garden.","Germanic origin, through French. Originally meant “an enclosed yard.”"],
+    ["animal","A zebra is an animal with black and white stripes.","Latin origin. Originally meant “having breath.”"],
+    ["school","We walk to school together every morning.","Greek origin. Originally meant “free time” or “leisure.”"],
+    ["family","Our family eats dinner together on Sundays.","Latin origin. Originally meant “the household,” including its servants."],
+    ["morning","I eat breakfast every morning before class.","Old English origin. Originally meant the first part of the day, at dawn."],
+    ["answer","Raise your hand if you know the answer.","Old English origin. Originally meant “to swear back” in reply to a charge."],
+    ["enough","I have enough money for lunch.","Old English origin. Originally meant “sufficient.”"],
+    ["orange","She peeled an orange for her snack.","Sanskrit origin, traveling through Persian, Arabic, and French. Originally named the tree, not the color."],
+    ["library","I borrowed a mystery novel from the library.","Latin origin. Came from a word for “book,” which also meant the inner bark of a tree."],
+    ["dolphin","A dolphin leaped out of the water.","Greek origin. Linked to the Greek word for “womb.”"],
+    ["kitchen","Dad is cooking pasta in the kitchen.","Latin origin. Originally meant “a cooking place.”"],
+    ["calendar","Mark the date on the calendar.","Latin origin. Originally meant “account book,” from the first day of the month when debts came due."]
+  ]},
+  medium: { label: "Medium", blurb: "Common but tricky", words: [
+    ["necessary","It is necessary to wear a helmet when you ride.","Latin origin. Originally meant “unavoidable.”"],
+    ["separate","Please separate the whites from the colors.","Latin origin. Originally meant “to set apart.”"],
+    ["definitely","She will definitely win the race.","Latin origin. Originally meant “to mark boundaries.”"],
+    ["environment","We must protect the environment.","French origin. Originally meant “to surround.”"],
+    ["embarrass","Please don't embarrass me in front of my friends.","Romance-language origin. Originally meant “to obstruct or hinder.”"],
+    ["rhythm","The drummer kept a steady rhythm.","Greek origin. Originally meant “measured flow.”"],
+    ["conscience","His conscience bothered him after the lie.","Latin origin. Originally meant “knowing together” or “shared knowledge within oneself.”"],
+    ["privilege","Voting is both a right and a privilege.","Latin origin. Originally meant “a law for one person.”"],
+    ["restaurant","We had dinner at a small Italian restaurant.","French origin. Originally meant a strengthening broth that revived the weary."],
+    ["accommodate","The hotel can accommodate fifty guests.","Latin origin. Originally meant “to make fit.”"],
+    ["occurrence","A double rainbow is a rare occurrence.","Latin origin. Originally meant “to run toward.”"],
+    ["February","My birthday is in February.","Latin origin. Named for a Roman festival of purification."],
+    ["vegetable","Broccoli is my favorite green vegetable.","Latin origin. Originally meant “full of life” or “able to grow.”"],
+    ["temperature","Check the temperature outside before you go.","Latin origin. Originally meant “a proper mixture” or “moderation.”"],
+    ["chocolate","She melted chocolate for the cake.","Nahuatl (Aztec) origin. Often said to mean “bitter water.”"],
+    ["pneumonia","He was treated in the hospital for pneumonia.","Greek origin. Originally meant “breath” or “lung.”"],
+    ["mischievous","The mischievous puppy chewed my shoe.","Old French origin. Originally meant “to come to a bad end.”"],
+    ["neighbor","Our neighbor waters our plants when we travel.","Old English origin. Originally meant “near dweller.”"],
+    ["physical","Gym class is part of physical education.","Greek origin, through Latin. Originally meant “relating to nature.”"],
+    ["guarantee","The store will guarantee your refund.","Old French origin, from a Germanic source. Originally meant “a pledge.”"]
+  ]},
+  hard: { label: "Hard", blurb: "Silent letters & foreign spellings", words: [
+    ["blasphemous","The preacher called the remark blasphemous.","Greek origin. Originally meant “evil speech.”"],
+    ["bureaucracy","Getting the permit meant wading through endless bureaucracy.","Hybrid of French and Greek. Originally meant “rule by the writing desk.”"],
+    ["conscientious","A conscientious student double-checks every answer.","Latin origin. Originally meant “having an inner awareness of right and wrong.”"],
+    ["questionnaire","Please fill out the questionnaire before your appointment.","French origin, from Latin. Originally meant “a list of inquiries.”"],
+    ["millennium","A millennium is a span of one thousand years.","Latin origin. Combines the words for “a thousand” and “year.”"],
+    ["silhouette","The cat's silhouette appeared on the curtain.","French origin. Named after a stingy government finance minister."],
+    ["pharaoh","The pharaoh ruled ancient Egypt.","Egyptian origin. Originally meant “great house.”"],
+    ["camaraderie","The team shared a strong spirit of camaraderie.","French origin. Originally meant “those who share a room.”"],
+    ["supersede","The new rule will supersede the old one.","Latin origin. Originally meant “to sit above.”"],
+    ["sacrilegious","He thought burning the flag was sacrilegious.","Latin origin. Originally meant “to rob holy things.”"],
+    ["liaison","She acted as a liaison between the two departments.","French origin, from Latin. Originally meant “a binding together.”"],
+    ["onomatopoeia","“Buzz” is an example of onomatopoeia.","Greek origin. Originally meant “name-making.”"],
+    ["ophthalmologist","The ophthalmologist checked my vision.","Greek origin. Combines the words for “eye” and “study.”"],
+    ["unequivocal","She gave an unequivocal denial.","Latin origin. Originally meant “not saying two things at once.”"],
+    ["espresso","He ordered a double espresso.","Italian origin. Originally meant “squeezed out.”"],
+    ["chauffeur","The chauffeur opened the car door.","French origin. Originally meant “one who heats a fire,” a stoker."],
+    ["rendezvous","We planned a rendezvous at the station at noon.","French origin. Originally meant “present yourselves.”"],
+    ["hierarchy","The company has a very clear hierarchy.","Greek origin. Originally meant “priestly rule.”"],
+    ["maintenance","Regular car maintenance prevents breakdowns.","French origin, from Latin. Originally meant “to hold by hand.”"],
+    ["gauge","Check the gauge to see how much fuel is left.","Old French origin. Originally meant “a standard measure.”"]
+  ]},
+  expert: { label: "Expert", blurb: "Spelling-bee championship words", words: [
+    ["chiaroscuro","The painter used chiaroscuro to create drama.","Italian origin. Originally meant “light-dark.”"],
+    ["syzygy","A solar eclipse is a type of syzygy.","Greek origin. Originally meant “yoked together.”"],
+    ["weltschmerz","Weltschmerz settled over the young poet.","German origin. Originally meant “world-pain.”"],
+    ["bildungsroman","The novel is a classic bildungsroman about growing up.","German origin. Originally meant “a novel of formation.”"],
+    ["gnocchi","She served gnocchi with brown butter and sage.","Italian origin. Originally meant “knots” or “lumps.”"],
+    ["vichyssoise","The chef served chilled vichyssoise on a hot day.","French origin. Named for a French spa town."],
+    ["mnemonic","Use a mnemonic to remember the order of the planets.","Greek origin. Originally meant “of memory” or “mindful.”"],
+    ["cnidarian","A jellyfish is a cnidarian.","Greek origin. Originally meant “nettle.”"],
+    ["eleemosynary","The eleemosynary foundation gave grants to local schools.","Greek origin. Originally meant “compassion” or “pity.”"],
+    ["logorrhea","His logorrhea exhausted the audience.","Greek origin. Originally meant “word flow.”"],
+    ["paraphernalia","The camper packed all her fishing paraphernalia.","Greek origin. Originally meant “a bride's belongings beyond her dowry.”"],
+    ["schadenfreude","He felt a flicker of schadenfreude when his rival stumbled.","German origin. Originally meant “harm-joy.”"],
+    ["quinoa","She cooked quinoa for dinner.","Quechua origin, from the Andes. The Incas called the plant the “mother grain.”"],
+    ["apotheosis","The concert was the apotheosis of her career.","Greek origin. Originally meant “making into a god.”"],
+    ["sesquipedalian","He was famous for his sesquipedalian vocabulary.","Latin origin. Originally meant “a foot and a half long.”"],
+    ["bourgeoisie","The bourgeoisie gained influence in the growing city.","French origin. Originally meant “town dwellers.”"],
+    ["prestidigitation","The magician's prestidigitation amazed the children.","French origin. Originally meant “quick fingers.”"],
+    ["kaleidoscope","She twisted the kaleidoscope to change the pattern.","Greek origin, coined in 1817. Originally meant “viewer of beautiful shapes.”"],
+    ["acquiesce","He chose to acquiesce rather than argue.","Latin origin. Originally meant “to rest quietly in agreement.”"],
+    ["Worcestershire","Add a splash of Worcestershire sauce.","English origin. Named after an English county."]
+  ]}
+};
+
+/* ---------------- Settings ---------------- */
+const ROUND_LEN = 10, MAX_PTS = 1000, MIN_PTS = 100, DECAY_SECS = 20,
+      TIMEOUT_SECS = 45, HINT_COST = 100, FLOOR_PTS = 50, STREAK_STEP = 0.1, STREAK_CAP = 5;
+
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const store = {
+  get(k){ try { return localStorage.getItem(k); } catch(e){ return null; } },
+  set(k,v){ try { localStorage.setItem(k,v); } catch(e){} }
+};
+
+/* ---------------- Speech ---------------- */
+const synthOK = 'speechSynthesis' in window;
+let voices = [], voiceName = null, speakId = 0;
+
+function loadVoices(){
+  if(!synthOK) return;
+  voices = speechSynthesis.getVoices().filter(v => /^en/i.test(v.lang));
+  const sel = $('voice');
+  sel.innerHTML = '';
+  voices.forEach(v => {
+    const o = document.createElement('option');
+    o.value = v.name; o.textContent = v.name + ' (' + v.lang + ')';
+    sel.appendChild(o);
+  });
+  const saved = store.get('sq_voice');
+  const pick = voices.find(v => v.name === saved)
+    || voices.find(v => /en-US/i.test(v.lang) && /(Samantha|Google US|Aria|Jenny|Natural)/i.test(v.name))
+    || voices.find(v => /en-US/i.test(v.lang))
+    || voices[0];
+  if(pick){ sel.value = pick.name; voiceName = pick.name; }
+}
+
+function speak(text, rate, done){
+  if(!synthOK){ done && done(); return; }
+  const id = ++speakId;
+  speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(text);
+  const v = voices.find(x => x.name === voiceName);
+  if(v){ u.voice = v; u.lang = v.lang; } else { u.lang = 'en-US'; }
+  u.rate = rate;
+  S.speaking = true;
+  document.body.classList.add('talking');
+  let finished = false, guard;
+  const fin = () => {
+    if(finished) return;
+    finished = true; clearTimeout(guard);
+    if(id !== speakId) return;          // superseded by a newer utterance
+    S.speaking = false;
+    document.body.classList.remove('talking');
+    $('bReplay').classList.remove('speaking');
+    $('bSentence').classList.remove('speaking');
+    done && done();
+  };
+  u.onend = fin; u.onerror = fin;
+  guard = setTimeout(fin, 4000 + text.length * 90);   // safety net for browsers that skip onend
+  speechSynthesis.speak(u);
+}
+
+/* ---------------- Game state ---------------- */
+let S = { speaking:false };
+
+function shuffle(a){
+  a = a.slice();
+  for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; }
+  return a;
+}
+function show(id){
+  ['start','game','result'].forEach(s => $(s).classList.toggle('hide', s !== id));
+  window.scrollTo(0,0);
+}
+
+function buildMenu(){
+  const box = $('levels'); box.innerHTML = '';
+  Object.keys(LEVELS).forEach(key => {
+    const L = LEVELS[key];
+    const b = document.createElement('button');
+    b.className = 'lvl';
+    const best = store.get('sq_best_' + key);
+    b.innerHTML = '<b>' + esc(L.label) + '</b><small>' + esc(L.blurb) + '</small>' +
+      (best ? '<span class="best">Best: ' + esc(best) + '</span>' : '');
+    b.onclick = () => startRound(key);
+    box.appendChild(b);
+  });
+}
+
+function startRound(levelKey){
+  const L = LEVELS[levelKey];
+  S = {
+    level: levelKey, queue: shuffle(L.words).slice(0, ROUND_LEN),
+    i: 0, score: 0, streak: 0, correct: 0, totalTime: 0, log: [],
+    speaking: false
+  };
+  show('game');
+  nextWord();
+}
+
+function nextWord(){
+  const w = S.queue[S.i];
+  S.cur = { word: w[0], sentence: w[1], root: w[2] };
+  S.elapsed = 0; S.running = false; S.answered = false;
+  S.usedSentence = false; S.usedRoot = false;
+  $('sWord').textContent = (S.i+1) + '/' + S.queue.length;
+  $('sScore').textContent = S.score;
+  $('sStreak').textContent = S.streak;
+  $('fb').classList.add('hide');
+  $('rootBox').classList.add('hidden');
+  $('answer').value = ''; $('answer').disabled = false;
+  $('bSubmit').disabled = false;
+  $('bReplay').disabled = false; $('bSentence').disabled = false; $('bRoot').disabled = false;
+  updateTimerUI();
+  $('answer').focus();
+  sayWord();
+}
+
+function sayWord(){
+  $('bReplay').classList.add('speaking');
+  speak(S.cur.word, 0.8, () => { if(!S.answered){ S.running = true; $('answer').focus(); } });
+  if(!synthOK) S.running = true;
+}
+
+/* ---------------- Scoring & timer ---------------- */
+function rawPoints(){
+  const base = S.elapsed >= DECAY_SECS ? MIN_PTS
+    : MAX_PTS - (MAX_PTS - MIN_PTS) * (S.elapsed / DECAY_SECS);
+  const pen = ((S.usedSentence?1:0) + (S.usedRoot?1:0)) * HINT_COST;
+  return Math.max(FLOOR_PTS, Math.round(base - pen));
+}
+function multiplier(){ return 1 + STREAK_STEP * Math.min(S.streak, STREAK_CAP); }
+
+function updateTimerUI(){
+  $('clock').textContent = S.elapsed.toFixed(1);
+  $('worth').textContent = rawPoints();
+  const m = multiplier();
+  $('mult').textContent = m > 1 ? '× ' + m.toFixed(1) + ' streak' : '';
+  const pct = Math.max(0, 100 - (S.elapsed / DECAY_SECS) * 100);
+  const bar = $('barFill');
+  bar.style.width = pct + '%';
+  bar.style.background = pct > 55 ? 'var(--green)' : pct > 25 ? 'var(--gold)' : 'var(--red)';
+}
+
+setInterval(() => {
+  if(!S.cur || S.answered || !S.running || S.speaking) return;
+  S.elapsed += 0.1;
+  updateTimerUI();
+  if(S.elapsed >= TIMEOUT_SECS) submit(true);
+}, 100);
+
+/* ---------------- Answer handling ---------------- */
+function submit(timedOut){
+  if(!S.cur || S.answered) return;
+  const guess = $('answer').value.trim();
+  const correct = !timedOut && guess.toLowerCase() === S.cur.word.toLowerCase();
+  S.answered = true; S.running = false;
+  speechSynthesis && synthOK && speechSynthesis.cancel();
+  S.speaking = false;
+  $('answer').disabled = true; $('bSubmit').disabled = true;
+  $('bReplay').disabled = true; $('bSentence').disabled = true; $('bRoot').disabled = true;
+
+  let pts = 0, raw = rawPoints(), mult = multiplier();
+  if(correct){
+    pts = Math.round(raw * mult);
+    S.score += pts; S.correct++; S.streak++; S.totalTime += S.elapsed;
+  } else {
+    S.streak = 0;
+  }
+  S.log.push({ word: S.cur.word, guess, correct, pts, time: S.elapsed });
+  $('sScore').textContent = S.score;
+  $('sStreak').textContent = S.streak;
+
+  const fb = $('fb');
+  fb.className = 'fb ' + (correct ? 'good' : 'bad');
+  const last = S.i + 1 >= S.queue.length;
+  let html = '';
+  if(correct){
+    html += '<h2 style="color:var(--green)">✓ Correct! +' + pts + '</h2>';
+    html += '<div class="word">' + esc(S.cur.word) + '</div>';
+    html += '<p>Time <b>' + S.elapsed.toFixed(1) + 's</b> · Base <b>' + raw + '</b>' +
+            (mult > 1 ? ' × streak <b>' + mult.toFixed(1) + '</b>' : '') + '</p>';
+  } else {
+    html += '<h2 style="color:var(--red)">' + (timedOut ? '⏱ Time’s up' : '✗ Not quite') + '</h2>';
+    if(!timedOut && guess) html += '<p>You typed: <b>' + esc(guess) + '</b></p>';
+    html += '<p>Correct spelling:</p><div class="word">' + esc(S.cur.word) + '</div>';
+  }
+  html += '<p><b>Sentence:</b> ' + esc(S.cur.sentence) + '</p>';
+  html += '<p><b>Root:</b> ' + esc(S.cur.root) + '</p>';
+  html += '<button class="btn primary" id="bNext" style="width:100%;margin-top:10px;padding:14px">' +
+          (last ? 'See results' : 'Next word') + '</button>';
+  fb.innerHTML = html;
+  fb.classList.remove('hide');
+  const nb = $('bNext');
+  nb.onclick = () => { S.i++; if(S.i >= S.queue.length) finish(); else nextWord(); };
+  nb.focus();
+  fb.scrollIntoView({ behavior:'smooth', block:'nearest' });
+}
+
+function finish(){
+  const key = S.level, L = LEVELS[key];
+  $('rLevel').textContent = L.label + ' level';
+  $('rScore').textContent = S.score;
+  const prev = parseInt(store.get('sq_best_' + key) || '0', 10);
+  let bestMsg;
+  if(S.score > prev){ store.set('sq_best_' + key, String(S.score)); bestMsg = '🏆 New personal best!'; }
+  else bestMsg = 'Personal best: ' + prev;
+  $('rBest').textContent = bestMsg;
+  const avg = S.correct ? (S.totalTime / S.correct).toFixed(1) : '—';
+  $('rDetail').innerHTML = '<b>' + S.correct + '/' + S.queue.length + '</b> correct · avg time on correct words <b>' + avg + 's</b>';
+  const missed = S.log.filter(r => !r.correct);
+  $('missBox').classList.toggle('hide', missed.length === 0);
+  $('missList').innerHTML = missed.map(r =>
+    '<li><b>' + esc(r.word) + '</b>' + (r.guess ? ' <span class="note">(you typed “' + esc(r.guess) + '”)</span>' : '') + '</li>').join('');
+  buildMenu();
+  show('result');
+}
+
+/* ---------------- Wire up ---------------- */
+$('form').addEventListener('submit', e => { e.preventDefault(); if(!S.answered) submit(false); });
+
+$('bReplay').onclick = () => { if(S.answered) return; sayWord(); $('answer').focus(); };
+
+$('bSentence').onclick = () => {
+  if(S.answered) return;
+  S.usedSentence = true;
+  updateTimerUI();
+  $('bSentence').classList.add('speaking');
+  speak(S.cur.sentence, 0.95, () => { if(!S.answered){ S.running = true; $('answer').focus(); } });
+  if(!synthOK) S.running = true;
+};
+
+$('bRoot').onclick = () => {
+  if(S.answered) return;
+  S.usedRoot = true;
+  updateTimerUI();
+  const box = $('rootBox');
+  box.textContent = '🌿 ' + S.cur.root;
+  box.classList.remove('hidden');
+  S.running = true;
+  $('answer').focus();
+};
+
+$('again').onclick = () => startRound(S.level);
+$('menu').onclick = () => { buildMenu(); show('start'); };
+
+$('voice').onchange = e => { voiceName = e.target.value; store.set('sq_voice', voiceName); };
+$('testVoice').onclick = () => speak('Welcome to the spelling bee. Your word is: blasphemous.', 0.9);
+
+if(!synthOK) $('nospeech').classList.remove('hide');
+else { loadVoices(); speechSynthesis.onvoiceschanged = loadVoices; }
+buildMenu();
+</script>
+</body>
+</html>
