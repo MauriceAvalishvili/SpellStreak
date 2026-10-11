@@ -57,6 +57,11 @@ input[type=text]:focus{border-color:var(--green)}
 .miss{list-style:none;padding:0;margin:8px 0}
 .miss li{padding:6px 0;border-bottom:1px solid var(--line)}
 .warn{background:#3a2a00;border:1px solid var(--gold);color:var(--gold);padding:10px;border-radius:10px;margin-bottom:12px;font-size:14px}
+.daily{border-color:var(--green);background:linear-gradient(135deg,#0f2b21,var(--panel));margin-bottom:14px}
+.daily .row{justify-content:space-between;flex-wrap:nowrap}
+.daily b{font-size:18px}
+.daily .note{margin-top:4px;line-height:1.5}
+.grid{font-size:34px;letter-spacing:4px;margin:10px 0}
 </style>
 </head>
 <body>
@@ -72,8 +77,17 @@ input[type=text]:focus{border-color:var(--green)}
   <h1>Spell <em>Streak</em></h1>
   <p class="sub">Hear the word. Type it fast. Faster correct spelling = more points.</p>
   <div id="nospeech" class="warn hide">Your browser doesn't support speech synthesis, so words can't be read aloud. Try Chrome, Edge, or Safari.</div>
+  <div class="card daily" id="dailyCard">
+    <div class="row">
+      <div>
+        <b id="dailyTitle">Daily Challenge</b>
+        <div class="note" id="dailySub"></div>
+      </div>
+      <button class="btn primary" id="dailyBtn" style="padding:12px 18px;white-space:nowrap">Play</button>
+    </div>
+  </div>
   <div class="card">
-    <b>Choose a level</b>
+    <b>Practice by level</b>
     <div class="levels" id="levels"></div>
     <p class="note">10 words per round. Replay is free. “Use in a sentence” and “Show root” each cost 100 points.</p>
     <div class="row" style="margin-top:12px">
@@ -119,6 +133,13 @@ input[type=text]:focus{border-color:var(--green)}
     <div class="big" id="rScore">0</div>
     <div id="rBest" class="note"></div>
     <p id="rDetail"></p>
+  </div>
+  <div class="card hide" id="shareBox" style="margin-top:14px;text-align:center">
+    <b id="shareTitle">Your result</b>
+    <div class="grid" id="shareGrid"></div>
+    <div class="note">🟩 fast &amp; clean · 🟨 slow or used a hint · 🟥 missed</div>
+    <button class="btn primary" id="shareBtn" style="width:100%;margin-top:12px;padding:14px"></button>
+    <div class="note" id="rNext"></div>
   </div>
   <div class="card" style="margin-top:14px" id="missBox">
     <b>Words to practice</b>
@@ -315,12 +336,13 @@ function buildMenu(){
     b.onclick = () => startRound(key);
     box.appendChild(b);
   });
+  refreshDailyCard();
 }
 
-function startRound(levelKey){
-  const L = LEVELS[levelKey];
+function startRound(levelKey, dailySet){
   S = {
-    level: levelKey, queue: shuffle(L.words).slice(0, ROUND_LEN),
+    level: levelKey, daily: !!dailySet,
+    queue: dailySet || shuffle(LEVELS[levelKey].words).slice(0, ROUND_LEN),
     i: 0, score: 0, streak: 0, correct: 0, totalTime: 0, log: [],
     speaking: false
   };
@@ -385,7 +407,7 @@ function submit(timedOut){
   const guess = $('answer').value.trim();
   const correct = !timedOut && guess.toLowerCase() === S.cur.word.toLowerCase();
   S.answered = true; S.running = false;
-  speechSynthesis && synthOK && speechSynthesis.cancel();
+  if(synthOK) speechSynthesis.cancel();
   S.speaking = false;
   $('answer').disabled = true; $('bSubmit').disabled = true;
   $('bReplay').disabled = true; $('bSentence').disabled = true; $('bRoot').disabled = true;
@@ -397,7 +419,7 @@ function submit(timedOut){
   } else {
     S.streak = 0;
   }
-  S.log.push({ word: S.cur.word, guess, correct, pts, time: S.elapsed });
+  S.log.push({ word: S.cur.word, guess, correct, pts, time: S.elapsed, hints: S.usedSentence || S.usedRoot });
   $('sScore').textContent = S.score;
   $('sStreak').textContent = S.streak;
 
@@ -428,6 +450,8 @@ function submit(timedOut){
 }
 
 function finish(){
+  if(S.daily){ finishDaily(); return; }
+  $('shareBox').classList.add('hide'); $('again').classList.remove('hide');
   const key = S.level, L = LEVELS[key];
   $('rLevel').textContent = L.label + ' level';
   $('rScore').textContent = S.score;
@@ -444,6 +468,128 @@ function finish(){
     '<li><b>' + esc(r.word) + '</b>' + (r.guess ? ' <span class="note">(you typed “' + esc(r.guess) + '”)</span>' : '') + '</li>').join('');
   buildMenu();
   show('result');
+}
+
+/* ---------------- Daily Challenge ----------------
+   Same 5 words for everyone on a given (local) date, once per day.
+   Words are picked with a seeded shuffle of today's date, ramping
+   easy → medium → hard → hard → expert.                            */
+const DAILY_EPOCH = Date.UTC(2026, 9, 11);          // Daily #1 = Oct 11, 2026
+const DAILY_PLAN = [['easy',1],['medium',1],['hard',2],['expert',1]];
+const FAST_SECS = 8;                                 // green square cutoff
+const pad2 = n => String(n).padStart(2, '0');
+const dayKey = d => d.getFullYear() + '-' + pad2(d.getMonth()+1) + '-' + pad2(d.getDate());
+const todayKey = () => dayKey(new Date());
+function dailyNumber(){
+  const d = new Date();
+  return Math.max(1, Math.round((Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()) - DAILY_EPOCH) / 86400000) + 1);
+}
+function hashStr(s){
+  let h = 1779033703 ^ s.length;
+  for(let i=0;i<s.length;i++){ h = Math.imul(h ^ s.charCodeAt(i), 3432918353); h = (h << 13) | (h >>> 19); }
+  return h >>> 0;
+}
+function mulberry32(a){
+  return function(){
+    a |= 0; a = (a + 0x6D2B79F5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+function seededShuffle(arr, rnd){
+  const a = arr.slice();
+  for(let i=a.length-1;i>0;i--){ const j = Math.floor(rnd() * (i+1)); [a[i],a[j]] = [a[j],a[i]]; }
+  return a;
+}
+function dailyWords(){
+  const rnd = mulberry32(hashStr('spell-streak-' + todayKey()));
+  const out = [];
+  DAILY_PLAN.forEach(([lvl, n]) => out.push(...seededShuffle(LEVELS[lvl].words, rnd).slice(0, n)));
+  return out;
+}
+
+function loadDaily(){ try { return JSON.parse(store.get('sq_daily_' + todayKey()) || 'null'); } catch(e){ return null; } }
+function loadStreak(){ try { return JSON.parse(store.get('sq_daily_streak') || 'null') || { last:null, n:0 }; } catch(e){ return { last:null, n:0 }; } }
+function liveStreak(){
+  const st = loadStreak(), y = new Date(); y.setDate(y.getDate() - 1);
+  return (st.last === todayKey() || st.last === dayKey(y)) ? st.n : 0;
+}
+const dailyEmoji = r => !r.c ? '🟥' : (r.h || r.t > FAST_SECS) ? '🟨' : '🟩';
+
+function countdownText(){
+  const now = new Date(), next = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+  const s = Math.max(0, Math.floor((next - now) / 1000));
+  return pad2(Math.floor(s/3600)) + ':' + pad2(Math.floor(s%3600/60)) + ':' + pad2(s%60);
+}
+function tickCountdown(){
+  const t = countdownText();
+  ['cdCard','cdResult'].forEach(id => { const e = $(id); if(e) e.textContent = t; });
+}
+let shownKey = null, shareText = '';
+function refreshDailyCard(){
+  shownKey = todayKey();
+  const saved = loadDaily(), st = liveStreak();
+  $('dailyTitle').textContent = 'Daily Challenge #' + dailyNumber() + (saved ? ' ✓' : '');
+  let sub = saved
+    ? saved.results.map(dailyEmoji).join('') + ' · ' + saved.score + ' pts · next in <span id="cdCard"></span>'
+    : 'Same 5 words for everyone today. Share your emoji score.';
+  if(st) sub += '<br>🔥 ' + st + '-day streak';
+  $('dailySub').innerHTML = sub;
+  $('dailyBtn').textContent = saved ? 'View result' : 'Play';
+  tickCountdown();
+}
+setInterval(() => { if(shownKey && shownKey !== todayKey()) refreshDailyCard(); else tickCountdown(); }, 1000);
+
+function finishDaily(){
+  const key = todayKey();
+  const results = S.log.map(r => ({ c: r.correct, t: Math.round(r.time * 10) / 10, h: !!r.hints }));
+  let st = loadStreak();
+  if(st.last !== key){
+    const y = new Date(); y.setDate(y.getDate() - 1);
+    st = { last: key, n: st.last === dayKey(y) ? st.n + 1 : 1 };
+    store.set('sq_daily_streak', JSON.stringify(st));
+  }
+  const saved = { num: dailyNumber(), score: S.score, results, streak: st.n };
+  store.set('sq_daily_' + key, JSON.stringify(saved));
+  renderDailyResult(saved);
+}
+
+function renderDailyResult(saved){
+  const grid = saved.results.map(dailyEmoji).join('');
+  const right = saved.results.filter(r => r.c).length;
+  $('rLevel').textContent = 'Daily Challenge #' + saved.num;
+  $('rScore').textContent = saved.score;
+  $('rBest').textContent = saved.streak > 1 ? '🔥 ' + saved.streak + '-day streak' : 'New set of words tomorrow';
+  $('rDetail').innerHTML = '<b>' + right + '/' + saved.results.length + '</b> correct';
+  $('shareTitle').textContent = 'Spell Streak #' + saved.num;
+  $('shareGrid').textContent = grid;
+  $('rNext').innerHTML = 'Next challenge in <span id="cdResult"></span>';
+  shareText = 'Spell Streak #' + saved.num + '\n' + grid + '  ' + saved.score + ' pts · ' + right + '/' + saved.results.length +
+    (saved.streak > 1 ? '\n🔥 ' + saved.streak + '-day streak' : '') +
+    '\n' + location.href.split('#')[0].split('?')[0];
+  $('shareBtn').textContent = canShare() ? '📤 Share result' : '📋 Copy result';
+  $('shareBox').classList.remove('hide');
+  $('missBox').classList.add('hide');
+  $('again').classList.add('hide');
+  tickCountdown();
+  show('result');
+}
+
+const canShare = () => !!(navigator.share && /Android|iPhone|iPad|iPod/i.test(navigator.userAgent));
+async function shareResult(){
+  if(canShare()){
+    try { await navigator.share({ text: shareText }); return; }
+    catch(e){ if(e && e.name === 'AbortError') return; }
+  }
+  const btn = $('shareBtn'), label = btn.textContent;
+  try {
+    await navigator.clipboard.writeText(shareText);
+    btn.textContent = '✓ Copied!';
+    setTimeout(() => { btn.textContent = label; }, 1600);
+  } catch(e){
+    window.prompt('Copy your result:', shareText);
+  }
 }
 
 /* ---------------- Wire up ---------------- */
@@ -472,6 +618,12 @@ $('bRoot').onclick = () => {
 };
 
 $('again').onclick = () => startRound(S.level);
+$('dailyBtn').onclick = () => {
+  const saved = loadDaily();
+  if(saved) renderDailyResult(saved);
+  else startRound('daily', dailyWords());
+};
+$('shareBtn').onclick = shareResult;
 $('menu').onclick = () => { buildMenu(); show('start'); };
 
 $('voice').onchange = e => { voiceName = e.target.value; store.set('sq_voice', voiceName); };
